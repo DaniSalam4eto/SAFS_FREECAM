@@ -1,31 +1,3 @@
-local AUTO_SLOT = "AUTO"
-local BONE_HEAD = 31086
-
-local FOV_MIN = 15.0
-local FOV_MAX = 120.0
-local FOV_RATE_PER_SEC = 35.0
-
-local AXIS_NONE = 0.0
-
-local CTRL_ALT = 19
-local CTRL_SLOW = 36
-local CTRL_FAST = 21
-local CTRL_UP = 38
-local CTRL_DOWN = 44
-local CTRL_FWD = 32
-local CTRL_BACK = 33
-local CTRL_LEFT = 34
-local CTRL_RIGHT = 35
-local CTRL_ZOOM_IN = 15
-local CTRL_ZOOM_OUT = 14
-local CTRL_TOGGLE = 178
-local CTRL_MOUSE_X = 1
-
-local KEY_NUMS = {
-    ["1"] = 157, ["2"] = 158, ["3"] = 160, ["4"] = 164, ["5"] = 165,
-    ["6"] = 159, ["7"] = 161, ["8"] = 162, ["9"] = 163, ["0"] = 217
-}
-
 local inFreecam = false
 local lockMode = false
 local cam = nil
@@ -40,7 +12,6 @@ local activeVehName = nil
 local activeSlot = nil
 local lastVeh = nil
 local wasInVeh = false
-
 
 local function clamp(v, mn, mx)
     if v < mn then return mn elseif v > mx then return mx else return v end
@@ -97,13 +68,13 @@ local function ensureCamFirstPerson()
     local v = veh()
     if not v then return false end
 
-    local head = GetPedBoneCoords(p, BONE_HEAD, 0.0, 0.0, 0.0)
+    local head = GetPedBoneCoords(p, Config.BONE_HEAD, 0.0, 0.0, 0.0)
     pos = vector3(head.x, head.y, head.z)
 
     local rot = GetEntityRotation(v, 2)
     yaw = rot.z
-    pitch = AXIS_NONE
-    roll = AXIS_NONE
+    pitch = Config.AXIS_NONE
+    roll = Config.AXIS_NONE
     fov = Config.StartFov
 
     if cam and DoesCamExist(cam) then
@@ -155,7 +126,7 @@ local function captureForSave()
     if inFreecam and cam then
         return { pos = pos, yaw = yaw, pitch = pitch, fov = fov }
     else
-        local head = GetPedBoneCoords(ped(), BONE_HEAD, 0.0, 0.0, 0.0)
+        local head = GetPedBoneCoords(ped(), Config.BONE_HEAD, 0.0, 0.0, 0.0)
         local h = vector3(head.x, head.y, head.z)
         local rot = GetEntityRotation(v, 2)
         return { pos = h, yaw = rot.z, pitch = rot.x, fov = Config.StartFov }
@@ -181,7 +152,7 @@ local function chosenAutosaveSlot()
     if lockMode and activeSlot and string.match(activeSlot, "^%w+$") then
         return activeSlot
     end
-    return AUTO_SLOT
+    return Config.AUTO_SLOT
 end
 
 local function autoSaveForVehicle(v)
@@ -271,7 +242,7 @@ CreateThread(function()
                         local rot = GetEntityRotation(v, 2)
                         yaw = wrapDeg((rot.z or 0.0) + (activePreset.yawRel or 0.0))
                         pitch = wrapDeg((rot.x or 0.0) + (activePreset.pitchRel or 0.0))
-                        roll = rot.y or AXIS_NONE
+                        roll = rot.y or Config.AXIS_NONE
                         SetCamCoord(cam, pos.x, pos.y, pos.z)
                         SetCamRot(cam, pitch, roll, yaw, 2)
                         SetCamFov(cam, activePreset.fov or fov)
@@ -281,13 +252,13 @@ CreateThread(function()
                     EnableControlAction(0, 245, true)
                     EnableControlAction(0, 200, true)
 
-                    local lx = GetDisabledControlNormal(0, CTRL_MOUSE_X)
+                    local lx = GetDisabledControlNormal(0, Config.CTRL_MOUSE_X)
                     yaw = yaw - (lx * Config.MouseSensitivity)
 
                     local speed = moveSpeed
-                    if IsDisabledControlPressed(0, CTRL_FAST) then
+                    if IsDisabledControlPressed(0, Config.CTRL_FAST) then
                         speed = speed * Config.FastMultiplier
-                    elseif IsDisabledControlPressed(0, CTRL_SLOW) then
+                    elseif IsDisabledControlPressed(0, Config.CTRL_SLOW) then
                         speed = speed * Config.SlowMultiplier
                     end
 
@@ -295,18 +266,18 @@ CreateThread(function()
                     local f = fwdFlat(yaw)
                     local r = rightFromYaw(yaw)
 
-                    if IsDisabledControlPressed(0, CTRL_FWD) then pos = pos + (f * speed * dt) end
-                    if IsDisabledControlPressed(0, CTRL_BACK) then pos = pos - (f * speed * dt) end
-                    if IsDisabledControlPressed(0, CTRL_LEFT) then pos = pos - (r * speed * dt) end
-                    if IsDisabledControlPressed(0, CTRL_RIGHT) then pos = pos + (r * speed * dt) end
-                    if IsDisabledControlPressed(0, CTRL_DOWN) then pos = pos - (vector3(0.0, 0.0, 1.0) * speed * dt) end
-                    if IsDisabledControlPressed(0, CTRL_UP) then pos = pos + (vector3(0.0, 0.0, 1.0) * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_FWD) then pos = pos + (f * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_BACK) then pos = pos - (f * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_LEFT) then pos = pos - (r * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_RIGHT) then pos = pos + (r * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_DOWN) then pos = pos - (vector3(0.0, 0.0, 1.0) * speed * dt) end
+                    if IsDisabledControlPressed(0, Config.CTRL_UP) then pos = pos + (vector3(0.0, 0.0, 1.0) * speed * dt) end
 
-                    if IsDisabledControlPressed(0, CTRL_ZOOM_OUT) then
-                        fov = clamp(fov + (FOV_RATE_PER_SEC * dt), FOV_MIN, FOV_MAX)
+                    if IsDisabledControlPressed(0, Config.CTRL_ZOOM_OUT) then
+                        fov = clamp(fov + (Config.FOV_RATE_PER_SEC * dt), Config.FOV_MIN, Config.FOV_MAX)
                     end
-                    if IsDisabledControlPressed(0, CTRL_ZOOM_IN) then
-                        fov = clamp(fov - (FOV_RATE_PER_SEC * dt), FOV_MIN, FOV_MAX)
+                    if IsDisabledControlPressed(0, Config.CTRL_ZOOM_IN) then
+                        fov = clamp(fov - (Config.FOV_RATE_PER_SEC * dt), Config.FOV_MIN, Config.FOV_MAX)
                     end
 
                     local v = veh()
@@ -316,16 +287,16 @@ CreateThread(function()
                     end
 
                     SetCamCoord(cam, pos.x, pos.y, pos.z)
-                    SetCamRot(cam, AXIS_NONE, AXIS_NONE, yaw, 2)
+                    SetCamRot(cam, Config.AXIS_NONE, Config.AXIS_NONE, yaw, 2)
                     SetCamFov(cam, fov)
                 end
             end
         end
 
-        local altHeld = held(CTRL_ALT)
-        local ctrlHeld = held(CTRL_SLOW)
+        local altHeld = held(Config.CTRL_ALT)
+        local ctrlHeld = held(Config.CTRL_SLOW)
 
-        for n, code in pairs(KEY_NUMS) do
+        for n, code in pairs(Config.KEY_NUMS) do
             if altHeld and (IsDisabledControlJustPressed(0, code) or IsControlJustPressed(0, code)) then
                 if isInVehicle() then saveSlot(n) end
             elseif ctrlHeld and (IsDisabledControlJustPressed(0, code) or IsControlJustPressed(0, code)) then
@@ -339,7 +310,7 @@ CreateThread(function()
             end
         end
 
-        if pressed(CTRL_TOGGLE) then
+        if pressed(Config.CTRL_TOGGLE) then
             if inFreecam then
                 exitCam(true)
             else
@@ -347,10 +318,10 @@ CreateThread(function()
             end
         end
 
-        if (held(CTRL_SLOW) and (IsDisabledControlJustPressed(0, 172) or IsControlJustPressed(0, 172))) then
+        if (held(Config.CTRL_SLOW) and (IsDisabledControlJustPressed(0, 172) or IsControlJustPressed(0, 172))) then
             moveSpeed = clamp(moveSpeed + 0.5, 0.1, 200.0)
         end
-        if (held(CTRL_SLOW) and (IsDisabledControlJustPressed(0, 173) or IsControlJustPressed(0, 173))) then
+        if (held(Config.CTRL_SLOW) and (IsDisabledControlJustPressed(0, 173) or IsControlJustPressed(0, 173))) then
             moveSpeed = clamp(moveSpeed - 0.5, 0.1, 200.0)
         end
 
