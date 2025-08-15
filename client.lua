@@ -8,7 +8,6 @@ local roll = 0.0
 local moveSpeed = Config.DefaultMoveSpeed
 local fov = Config.StartFov
 local activePreset = nil
-local activeVehName = nil
 local activeSlot = nil
 local lastVeh = nil
 local wasInVeh = false
@@ -68,8 +67,7 @@ local function ensureCamFirstPerson()
     local v = veh()
     if not v then return false end
 
-    local head = GetPedBoneCoords(p, Config.BONE_HEAD, 0.0, 0.0, 0.0)
-    pos = vector3(head.x, head.y, head.z)
+    pos = GetPedBoneCoords(p, Config.BONE_HEAD, 0.0, 0.0, 0.0)
 
     local rot = GetEntityRotation(v, 2)
     yaw = rot.z
@@ -77,11 +75,8 @@ local function ensureCamFirstPerson()
     roll = Config.AXIS_NONE
     fov = Config.StartFov
 
-    if cam and DoesCamExist(cam) then
-        SetCamCoord(cam, pos.x, pos.y, pos.z)
-        SetCamRot(cam, pitch, roll, yaw, 2)
-        SetCamFov(cam, fov)
-        return true
+    if not cam or not DoesCamExist(cam) then
+        cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
     end
 
     cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
@@ -173,11 +168,8 @@ local function enterMode(isLock, preset, vehName)
 
     if isLock then
         activePreset = preset
-        activeVehName = vehName
         activeSlot = preset and preset.name or nil
     else
-        local v = veh()
-        activeVehName = v and vehDisplayName(v) or nil
         activePreset = nil
         activeSlot = nil
     end
@@ -193,16 +185,13 @@ local function exitCam(doAutosave)
     lockMode = false
 
     if cam and DoesCamExist(cam) then
-        renderCam(false)
         DestroyCam(cam, false)
         cam = nil
-    else
-        renderCam(false)
     end
 
+    renderCam(false)
     setPlayerHidden(false)
     activePreset = nil
-    activeVehName = nil
     activeSlot = nil
 end
 
@@ -231,22 +220,18 @@ CreateThread(function()
         wasInVeh = nowIn
 
         if inFreecam and cam and DoesCamExist(cam) then
-            if not isInVehicle() then
+            if not nowIn then
                 exitCam(true)
             else
                 if lockMode and activePreset then
-                    local v = veh()
-                    if v then
-                        local world = GetOffsetFromEntityInWorldCoords(v, activePreset.offset.x, activePreset.offset.y, activePreset.offset.z)
-                        pos = vector3(world.x, world.y, world.z)
-                        local rot = GetEntityRotation(v, 2)
-                        yaw = wrapDeg((rot.z or 0.0) + (activePreset.yawRel or 0.0))
-                        pitch = wrapDeg((rot.x or 0.0) + (activePreset.pitchRel or 0.0))
-                        roll = rot.y or Config.AXIS_NONE
-                        SetCamCoord(cam, pos.x, pos.y, pos.z)
-                        SetCamRot(cam, pitch, roll, yaw, 2)
-                        SetCamFov(cam, activePreset.fov or fov)
-                    end
+                    pos = GetOffsetFromEntityInWorldCoords(vnow, activePreset.offset.x, activePreset.offset.y, activePreset.offset.z)
+                    local rot = GetEntityRotation(vnow, 2)
+                    yaw = wrapDeg((rot.z or 0.0) + (activePreset.yawRel or 0.0))
+                    pitch = wrapDeg((rot.x or 0.0) + (activePreset.pitchRel or 0.0))
+                    roll = rot.y or Config.AXIS_NONE
+                    SetCamCoord(cam, pos.x, pos.y, pos.z)
+                    SetCamRot(cam, pitch, roll, yaw, 2)
+                    SetCamFov(cam, activePreset.fov or fov)
                 else
                     DisableAllControlActions(0)
                     EnableControlAction(0, 245, true)
@@ -280,11 +265,7 @@ CreateThread(function()
                         fov = clamp(fov - (Config.FOV_RATE_PER_SEC * dt), Config.FOV_MIN, Config.FOV_MAX)
                     end
 
-                    local v = veh()
-                    if v then
-                        local vx, vy, vz = table.unpack(GetEntityVelocity(v))
-                        pos = pos + vector3(vx, vy, vz) * dt
-                    end
+                    pos = pos + GetEntityVelocity(vnow) * dt
 
                     SetCamCoord(cam, pos.x, pos.y, pos.z)
                     SetCamRot(cam, Config.AXIS_NONE, Config.AXIS_NONE, yaw, 2)
@@ -297,10 +278,10 @@ CreateThread(function()
         local ctrlHeld = held(Config.CTRL_SLOW)
 
         for n, code in pairs(Config.KEY_NUMS) do
-            if altHeld and (IsDisabledControlJustPressed(0, code) or IsControlJustPressed(0, code)) then
-                if isInVehicle() then saveSlot(n) end
-            elseif ctrlHeld and (IsDisabledControlJustPressed(0, code) or IsControlJustPressed(0, code)) then
-                if isInVehicle() then
+            if (IsDisabledControlJustPressed(0, code) or IsControlJustPressed(0, code)) then
+                if altHeld and nowIn then
+                    saveSlot(n)
+                elseif ctrlHeld and nowIn then
                     if inFreecam and lockMode and activeSlot == n then
                         exitCam(true)
                     else
@@ -314,17 +295,19 @@ CreateThread(function()
             if inFreecam then
                 exitCam(true)
             else
-                if isInVehicle() then enterMode(false) end
+                if nowIn then enterMode(false) end
             end
         end
 
-        if (held(Config.CTRL_SLOW) and (IsDisabledControlJustPressed(0, 172) or IsControlJustPressed(0, 172))) then
-            moveSpeed = clamp(moveSpeed + 0.5, 0.1, 200.0)
+        if held(Config.CTRL_SLOW) then
+            if (IsDisabledControlJustPressed(0, 172) or IsControlJustPressed(0, 172)) then
+                moveSpeed = clamp(moveSpeed + 0.5, 0.1, 200.0)
+            end
+            if (IsDisabledControlJustPressed(0, 173) or IsControlJustPressed(0, 173)) then
+                moveSpeed = clamp(moveSpeed - 0.5, 0.1, 200.0)
+            end
         end
-        if (held(Config.CTRL_SLOW) and (IsDisabledControlJustPressed(0, 173) or IsControlJustPressed(0, 173))) then
-            moveSpeed = clamp(moveSpeed - 0.5, 0.1, 200.0)
-        end
-
+        
         Wait(0)
     end
 end)

@@ -16,7 +16,7 @@ Config.FOV_RATE_PER_SEC = 35.0
 
 Config.AXIS_NONE = 0.0
 
-Config.CTRL_ALT = 19
+Config.CTRL_ALT = 21
 Config.CTRL_SLOW = 36
 Config.CTRL_FAST = 21
 Config.CTRL_UP = 38
