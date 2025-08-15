@@ -4,7 +4,7 @@ Lightweight freecam with **per-player**, **per-vehicle** camera presets. Vehicle
 
 ## Features
 - **Delete** to toggle freecam (vehicles only).
-- **Shift + [0–9]** → save preset to slot.
+- **Alt + [0–9]** → save preset to slot.
 - **Ctrl + [0–9]** → load **lock mode** from slot; press the same combo again to exit.
 - **Autosave** on toggle-off, vehicle exit, and resource stop:
 - **Per-player storage** (by `license:` → `steam:` → `discord:` → `src:`).
